@@ -37,7 +37,7 @@ Garment ─────┘     (Gemini image edit)
 | GET | `/api/admin/analytics?days=30` | Usage analytics |
 | GET, PUT | `/api/admin/settings` | Read or update studio settings |
 
-[Add the try-on generation endpoint here.]
+| POST | `/api/tryon/generate` | Generate a try-on preview |
 
 ## Tech stack
 
@@ -50,8 +50,22 @@ git clone https://github.com/mmiskatul/AI-Fit-studio-Backend.git
 cd AI-Fit-studio-Backend
 pip install -r requirements.txt
 cp .env.example .env        # add your Fal AI, MongoDB, and Cloudinary keys
-uvicorn main:app --reload   # [adjust the module path to match your project]
+uvicorn app.main:app --reload
 ```
+
+The API runs at `http://localhost:8000`.
+
+### Environment variables
+
+| Group | Variables |
+|---|---|
+| Fal AI and database | `FAL_KEY`, `FAL_MODEL`, `MONGODB_URI`, `DATABASE_NAME` |
+| Admin and auth | `ADMIN_USERNAME`, `ADMIN_PASSWORD`, `JWT_SECRET_KEY`, `JWT_ALGORITHM`, `JWT_EXPIRE_MINUTES` |
+| Auth cookie | `JWT_ACCESS_COOKIE_NAME`, `JWT_ACCESS_COOKIE_SECURE`, `JWT_ACCESS_COOKIE_SAMESITE` |
+| CORS | `CORS_ALLOWED_ORIGINS` |
+| Cloudinary | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`, `CLOUDINARY_FOLDER` |
+
+Never commit real keys.
 
 ## Related
 
