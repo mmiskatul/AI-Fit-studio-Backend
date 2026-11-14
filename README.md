@@ -1,137 +1,63 @@
-# AI Virtual Try-On Backend
+# AI Fit Studio Backend
 
-FastAPI backend for an AI virtual try-on MVP. Users upload a full-body image, select a product, and the API sends the user image plus garment image to Fal AI to generate a realistic try-on preview.
+FastAPI backend for an **AI virtual try-on MVP**. A user uploads a full-body photo and picks a product, and the API sends both images to an image model, which generates a try-on preview.
 
-## Stack
+Built for the **AI Business Summit 2026**, hosted by the Data Science Club at Daffodil International University.
 
-- Python 3.11+
-- FastAPI
-- Pydantic
-- MongoDB with Motor async driver
-- Fal AI API
-- python-dotenv
+<!-- [add 3-4 example results: user photo, garment, generated try-on] -->
 
-## Setup
+## How it works
 
-1. Create a virtual environment:
-
-```bash
-python3.11 -m venv .venv
-source .venv/bin/activate
+```
+User photo ──┐
+             ├──►  Fal AI image model  ──►  try-on preview  ──►  saved with metadata
+Garment ─────┘     (Gemini image edit)
 ```
 
-2. Install dependencies:
+1. The user uploads a photo (jpg, jpeg, png, or webp, up to 10 MB).
+2. The user chooses a product from the catalog.
+3. The backend sends the user image and the garment image, plus a prompt, to Fal AI. The default model is `fal-ai/gemini-25-flash-image/edit`.
+4. The result is stored with its history in MongoDB, together with the provider, model ID, output URL, file details, and the seed returned by Fal (when available).
+
+## Features
+
+- Product catalog with full CRUD, seeded on startup
+- Photo uploads, stored on Cloudinary in production (local `uploads/` fallback)
+- Try-on generation with stored history
+- Admin dashboard, usage analytics, and persisted studio settings (rendering preferences feed into future generations)
+
+## API (main endpoints)
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET, POST | `/api/products` | List or create products |
+| GET, PUT, DELETE | `/api/products/{product_id}` | Read, update, or delete a product |
+| POST | `/api/uploads/user-photo` | Upload a user photo |
+| GET | `/api/admin/dashboard` | Admin overview |
+| GET | `/api/admin/analytics?days=30` | Usage analytics |
+| GET, PUT | `/api/admin/settings` | Read or update studio settings |
+
+[Add the try-on generation endpoint here.]
+
+## Tech stack
+
+Python 3.11+, FastAPI, Pydantic, MongoDB (Motor, async), Fal AI, Cloudinary
+
+## Getting started
 
 ```bash
+git clone https://github.com/mmiskatul/AI-Fit-studio-Backend.git
+cd AI-Fit-studio-Backend
 pip install -r requirements.txt
+cp .env.example .env        # add your Fal AI, MongoDB, and Cloudinary keys
+uvicorn main:app --reload   # [adjust the module path to match your project]
 ```
 
-3. Create your environment file:
+## Related
 
-```bash
-cp .env.example .env
-```
+- Website: [AI-Fit-studio-Website](https://github.com/mmiskatul/AI-Fit-studio-Website)
 
-4. Fill in `.env`:
+## Limitations
 
-```env
-FAL_KEY=your_fal_api_key
-MONGODB_URI=mongodb+srv://<username>:<password>@<cluster-url>/?retryWrites=true&w=majority&appName=VirtualTryOn
-DATABASE_NAME=virtual_tryon_db
-FAL_MODEL=fal-ai/gemini-25-flash-image/edit
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=change-this-password
-JWT_SECRET_KEY=generate-a-long-random-secret-with-openssl-rand-hex-32
-JWT_ALGORITHM=HS256
-JWT_EXPIRE_MINUTES=1440
-JWT_ACCESS_COOKIE_NAME=admin_access_token
-JWT_ACCESS_COOKIE_SECURE=false
-JWT_ACCESS_COOKIE_SAMESITE=lax
-CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:3001,https://ai-closet-viewer.vercel.app
-CLOUDINARY_CLOUD_NAME=your_cloudinary_cloud_name
-CLOUDINARY_API_KEY=your_cloudinary_api_key
-CLOUDINARY_API_SECRET=your_cloudinary_api_secret
-CLOUDINARY_FOLDER=ai-fit-studio
-```
-
-5. Create a MongoDB Atlas cluster and set `MONGODB_URI` to your Atlas connection string.
-
-   In Atlas, make sure you:
-
-   - Create a database user and password.
-   - Add your current IP address in **Network Access**.
-   - Replace `<username>`, `<password>`, and `<cluster-url>` in `.env`.
-
-6. Run the API:
-
-```bash
-uvicorn app.main:app --reload
-```
-
-The API runs at `http://localhost:8000`.
-
-## API Docs
-
-- Swagger UI: `http://localhost:8000/docs`
-- ReDoc: `http://localhost:8000/redoc`
-- Health check: `GET /health`
-
-## Endpoints
-
-### Products
-
-- `GET /api/products`
-- `GET /api/products/{product_id}`
-- `POST /api/products`
-- `PUT /api/products/{product_id}`
-- `DELETE /api/products/{product_id}`
-
-Products are seeded automatically on startup into the `products` collection.
-
-The admin dashboard user is seeded automatically from `ADMIN_USERNAME` and `ADMIN_PASSWORD` into the `admin_users` collection each time the backend starts.
-
-### Admin overview
-
-- `GET /api/admin/dashboard`
-- `GET /api/admin/analytics?days=30`
-- `GET /api/admin/settings`
-- `PUT /api/admin/settings`
-
-Requires an admin bearer token. Returns inventory totals, all-time and current-day try-on counts, a seven-day try-on series, the most-used product, recent products, per-product usage, and recent try-on activity for the dashboard overview.
-
-The analytics endpoint accepts a range from 7 to 90 days and returns real try-on volume, period comparison, category and product performance, inventory reach, and stored result metadata. Studio settings are persisted in MongoDB; rendering preferences are included in the guidance for future try-on generations.
-
-### Uploads
-
-- `POST /api/uploads/user-photo`
-
-Accepts `jpg`, `jpeg`, `png`, and `webp` files up to 10MB. In production, configure Cloudinary so uploads are stored remotely and returned as public HTTPS URLs. Without Cloudinary, local development falls back to `uploads/user_photos`.
-
-### Try-On
-
-- `POST /api/tryon/generate`
-- `GET /api/tryon/history`
-- `GET /api/tryon/history/{id}`
-
-Listing all history requires admin authentication. An individual generated result remains available by ID so the result page can open immediately after generation.
-
-Example request:
-
-```json
-{
-  "user_image_url": "/uploads/user_photos/example.png",
-  "product_id": "linen-oxford-shirt",
-  "prompt_optional": "Keep the outfit modest and realistic."
-}
-```
-
-Generated results are stored in Cloudinary when configured. Local development falls back to `uploads/results`. History is stored in the `tryon_results` MongoDB collection.
-
-Each try-on result now also stores `image_details`, including the Fal provider name, model ID, source output URL, content type, file size, optional width/height, and Fal's returned `seed` when available.
-
-## Notes
-
-- Keep `.env` private. Never expose `FAL_KEY` to the frontend.
-- Configure `CORS_ALLOWED_ORIGINS` with a comma-separated list of frontend origins that should be allowed to call the API with credentials.
-- Product image URLs should be publicly reachable or otherwise accessible to the backend.
-- The Fal implementation uses the Python `fal_client.subscribe(...)` flow with the `fal-ai/gemini-25-flash-image/edit` style input shape: `image_urls` plus `prompt`.
+- Output quality depends on the hosted image model and on the photo quality.
+- [Add what you observed: pose, lighting, clothing types that work best or worst.]
